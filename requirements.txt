@@ -1,0 +1,7 @@
+claude-agent-sdk==0.2.166
+fastapi
+uvicorn
+pyyaml
+# 1.82.7 and 1.82.8 were compromised on PyPI; keep this pinned.
+litellm[proxy]==1.104.3
+openai

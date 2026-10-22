@@ -1,0 +1,42 @@
+# LiteLLM proxy in front of ccgw. Callers (SAM, LangChain, OpenAI SDK, ...) talk
+# to this proxy; it forwards to ccgw as a plain OpenAI-compatible backend.
+#
+#   claude-code          -> ccgw default model (CCGW_CLAUDE_MODEL, sonnet)
+#   claude-code-<alias>  -> that Claude model (haiku | sonnet | opus)
+
+x-ccgw: &ccgw
+  api_base: http://127.0.0.1:9991/v1
+  api_key: os.environ/CCGW_API_KEY
+  timeout: 600
+  stream_timeout: 600
+
+model_list:
+  - model_name: claude-code
+    litellm_params: { <<: *ccgw, model: openai/claude-code }
+  - model_name: claude-code-haiku
+    litellm_params: { <<: *ccgw, model: openai/claude-code-haiku }
+  - model_name: claude-code-sonnet
+    litellm_params: { <<: *ccgw, model: openai/claude-code-sonnet }
+  - model_name: claude-code-opus
+    litellm_params: { <<: *ccgw, model: openai/claude-code-opus }
+
+router_settings:
+  # ccgw already retries rate limits (it knows when the window resets); LiteLLM
+  # only falls back. Remove the fallback line to fail instead of downgrading.
+  retry_policy:
+    RateLimitErrorRetries: 0
+  fallbacks:
+    - claude-code: [claude-code-haiku]
+  # One deployment per model: a cooldown would block every request to it.
+  disable_cooldowns: true
+
+litellm_settings:
+  drop_params: true        # ccgw ignores temperature/top_p/etc; do not reject them
+  request_timeout: 600
+  telemetry: false
+  # Anthropic-style /v1/messages callers (model "anthropic/...") would otherwise be
+  # bridged to the OpenAI Responses API, which ccgw does not serve.
+  use_chat_completions_url_for_anthropic_messages: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
