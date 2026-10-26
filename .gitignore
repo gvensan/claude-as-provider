@@ -1,0 +1,10 @@
+# Secrets
+.env
+
+# Runtime output
+logs/
+run/
+
+# Python
+__pycache__/
+*.pyc
